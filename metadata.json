@@ -1,0 +1,8 @@
+{
+  "name": "Ruta Libre - Transporte Descentralizado P2P",
+  "description": "App de transporte descentralizada P2P con mapas Leaflet, comunicación MQTT en tiempo real, negociación de tarifas en efectivo y cero registro de datos personales.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

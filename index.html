@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Ruta Libre - Tu viaje en minutos</title>
+  <meta name="description" content="Tu viaje en minutos sin registros complicados ni tarifas ocultas." />
+
+  <!-- Leaflet CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+  <!-- MQTT.js CDN -->
+  <script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
+
+  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            appBg: '#0B0E14',
+            surface: '#0B0E14',
+            surfaceCard: '#161B22',
+            cardBorder: '#21262D',
+            subtext: '#8B949E',
+            accentBlue: '#2563EB',
+            brandEmerald: '#10B981'
+          },
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace']
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    html, body {
+      background-color: #0B0E14;
+      color: #FFFFFF;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      margin: 0;
+      padding: 0;
+      overscroll-behavior: none;
+    }
+    /* Estilo oscuro para OpenStreetMap sin API Key */
+    .leaflet-tile {
+      filter: brightness(0.55) invert(100%) contrast(135%) hue-rotate(195deg) saturate(0.3);
+    }
+    .leaflet-container {
+      background: #0B0E14 !important;
+      font-family: inherit;
+    }
+    /* Aislamiento estricto del mapa Leaflet para evitar sobreposición */
+    #map-wrapper {
+      position: relative;
+      isolation: isolate;
+      z-index: 10;
+      overflow: hidden;
+    }
+    #leaflet-map {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      z-index: 1;
+      isolation: isolate;
+    }
+    .leaflet-pane {
+      z-index: 2 !important;
+    }
+    .leaflet-top, .leaflet-bottom {
+      z-index: 4 !important;
+    }
+    .leaflet-control {
+      z-index: 4 !important;
+    }
+    ::-webkit-scrollbar { display: none; }
+  </style>
+</head>
+<body class="bg-appBg text-white antialiased min-h-screen flex flex-col items-center select-none">
+
+  <!-- Contenedor Mobile First centrado -->
+  <div class="w-full max-w-md min-h-screen flex flex-col relative bg-appBg shadow-2xl border-x border-cardBorder/40">
+
+    <!-- HEADER SUPERIOR (Exacto como el diseño del usuario) -->
+    <header class="sticky top-0 z-30 bg-appBg/95 backdrop-blur-xl border-b border-cardBorder/60 px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center font-bold shadow-sm">
+          <!-- Car SVG Icon -->
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/>
+          </svg>
+        </div>
+        <span class="text-base font-bold tracking-tight text-white" id="header-title">Solicitar viaje</span>
+      </div>
+
+      <!-- Selector de Modo y Perfil -->
+      <div class="flex items-center gap-2">
+        <div class="flex items-center bg-[#11141C] border border-cardBorder p-0.5 rounded-xl text-xs">
+          <button id="toggle-pass" onclick="switchRole('passenger')" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-white text-black transition-all">
+            Viajar
+          </button>
+          <button id="toggle-driv" onclick="switchRole('driver')" class="px-2.5 py-1 rounded-lg text-xs font-semibold text-subtext hover:text-white transition-all">
+            Conducir
+          </button>
+        </div>
+
+        <button onclick="openProfileModal()" class="w-8 h-8 rounded-full overflow-hidden border border-cardBorder focus:outline-none flex items-center justify-center bg-cardBorder text-xs font-bold text-white">
+          <span id="header-avatar-initial">C</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- ÁREA PRINCIPAL -->
+    <main class="flex-1 flex flex-col relative w-full pb-20">
+
+      <!-- MAPA INTERACTIVO -->
+      <div id="map-wrapper" class="relative w-full h-[280px] bg-[#07090D] overflow-hidden z-10 shrink-0">
+        <div id="leaflet-map" class="w-full h-full"></div>
+
+        <!-- Botón Centrar Ubicación -->
+        <button onclick="getUserGPS()" class="absolute bottom-6 right-4 z-20 w-10 h-10 rounded-xl bg-surfaceCard/90 border border-cardBorder backdrop-blur-md flex items-center justify-center text-white active:scale-95 shadow-lg" title="Mi ubicación">
+          <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="7"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/>
+          </svg>
+        </button>
+
+        <!-- Indicador de Tiempo y Distancia Flotante -->
+        <div id="route-indicator-pill" class="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-3 py-1 rounded-full bg-surfaceCard/95 border border-cardBorder shadow-xl backdrop-blur-md">
+          <svg class="w-3.5 h-3.5 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+          </svg>
+          <span class="text-xs font-bold text-white font-mono" id="eta-text">14 min</span>
+          <span class="text-subtext text-xs">•</span>
+          <span class="text-xs text-subtext font-medium" id="dist-text">5.8 km</span>
+        </div>
+      </div>
+
+      <!-- PANTALLA 1: SOLICITAR VIAJE (PASAJERO) -->
+      <div id="screen-passenger-request" class="relative w-full bg-surfaceCard rounded-t-3xl px-4 pt-3 pb-6 border-t border-cardBorder shadow-2xl flex flex-col gap-3 -mt-5 z-20">
+        <!-- Barra de arrastre -->
+        <div class="w-full flex justify-center py-0.5">
+          <div class="w-9 h-1 rounded-full bg-cardBorder"></div>
+        </div>
+
+        <!-- Origen y Destino -->
+        <div class="flex flex-col bg-[#0d1117] rounded-2xl p-3 border border-cardBorder divide-y divide-cardBorder/60">
+          <!-- Punto de partida -->
+          <div class="flex items-center gap-3 pb-2.5">
+            <div class="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center shrink-0">
+              <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <span class="text-[10px] font-bold uppercase text-subtext tracking-wider">Punto de partida</span>
+              <p class="text-xs font-semibold text-white truncate" id="origin-input-label">Cra 43A # 18 Sur, El Poblado</p>
+            </div>
+            <button onclick="getUserGPS()" class="px-2.5 py-1 rounded-lg bg-surfaceCard border border-cardBorder text-blue-400 text-xs font-semibold flex items-center gap-1 active:scale-95">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="7"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/>
+              </svg>
+              <span>GPS</span>
+            </button>
+          </div>
+
+          <!-- Destino -->
+          <div class="flex items-center gap-3 pt-2.5">
+            <div class="w-6 h-6 rounded-full bg-red-500/20 flex items-center justify-center shrink-0">
+              <svg class="w-3.5 h-3.5 text-red-500" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 0 1 0-5 2.5 2.5 0 0 1 0 5z"/>
+              </svg>
+            </div>
+            <div class="flex-1 min-w-0">
+              <span class="text-[10px] font-bold uppercase text-subtext tracking-wider">¿A dónde vas?</span>
+              <p class="text-xs font-semibold text-white truncate" id="dest-input-label">Centro Comercial Santafé</p>
+            </div>
+            <button onclick="cycleDestination()" class="w-7 h-7 rounded-lg flex items-center justify-center text-subtext hover:text-white" title="Cambiar destino">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Tarifa y Negociación -->
+        <div class="flex flex-col bg-[#11141C] rounded-2xl p-3.5 gap-2.5 border border-cardBorder">
+          <div class="flex items-center justify-between px-1">
+            <span class="text-xs text-subtext font-medium">Tarifa sugerida:</span>
+            <span class="text-xs font-semibold text-white font-mono" id="suggested-price-label">$12.000 COP</span>
+          </div>
+
+          <!-- Selector de Precio -->
+          <div class="flex items-center justify-between bg-[#0d1117] rounded-xl px-3 py-2 border border-cardBorder">
+            <button onclick="modifyOffer(-1000)" class="w-11 h-11 rounded-lg bg-surfaceCard hover:bg-cardBorder flex items-center justify-center text-white active:scale-95 border border-cardBorder">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></svg>
+            </button>
+            <div class="flex flex-col items-center">
+              <span class="text-[11px] font-medium text-subtext">¿Cuánto ofreces?</span>
+              <div class="flex items-baseline gap-1">
+                <span class="text-2xl font-bold font-mono text-white" id="offer-price-val">$10.000</span>
+                <span class="text-xs font-bold text-blue-400">COP</span>
+              </div>
+            </div>
+            <button onclick="modifyOffer(1000)" class="w-11 h-11 rounded-lg bg-surfaceCard hover:bg-cardBorder flex items-center justify-center text-white active:scale-95 border border-cardBorder">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14m-7-7h14"/></svg>
+            </button>
+          </div>
+
+          <!-- Botones de Ajuste Rápido -->
+          <div class="grid grid-cols-3 gap-2">
+            <button onclick="modifyOffer(-2000)" class="py-2 px-1 rounded-xl bg-surfaceCard hover:bg-cardBorder border border-cardBorder text-slate-300 text-xs font-semibold font-mono active:scale-95">
+              -$2.000
+            </button>
+            <button onclick="modifyOffer(1000)" class="py-2 px-1 rounded-xl bg-surfaceCard hover:bg-cardBorder border border-cardBorder text-blue-400 text-xs font-semibold font-mono active:scale-95">
+              +$1.000
+            </button>
+            <button onclick="modifyOffer(2000)" class="py-2 px-1 rounded-xl bg-surfaceCard hover:bg-cardBorder border border-cardBorder text-blue-400 text-xs font-semibold font-mono active:scale-95">
+              +$2.000
+            </button>
+          </div>
+
+          <!-- Pago en efectivo -->
+          <div class="flex items-center justify-center gap-1.5 py-1 text-xs text-subtext font-medium">
+            <svg class="w-4 h-4 text-amber-400" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M21 18v1c0 1.1-.9 2-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14c1.1 0 2 .9 2 2v1h-9a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+            </svg>
+            <span>Pago en efectivo al finalizar</span>
+          </div>
+        </div>
+
+        <!-- Botón Principal Solicitar Viaje -->
+        <button onclick="startLookingForDrivers()" class="w-full h-12 rounded-2xl bg-white hover:bg-slate-200 text-black font-bold text-base flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] transition-all">
+          <svg class="w-5 h-5 rotate-45" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+          </svg>
+          <span>Solicitar viaje</span>
+        </button>
+      </div>
+
+      <!-- PANTALLA 2: OFERTAS EN CURSO (Matching Image 9) -->
+      <div id="screen-offers-in-progress" class="hidden relative w-full bg-surfaceCard rounded-t-3xl px-4 pt-3 pb-6 border-t border-cardBorder shadow-2xl flex flex-col gap-3 -mt-5 z-20">
+        <!-- Header Ofertas -->
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <h3 class="text-sm font-bold text-white">Ofertas en curso</h3>
+          </div>
+          <div class="flex items-center gap-1.5 text-xs text-subtext font-mono">
+            <svg class="w-4 h-4 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+            </svg>
+            <span id="countdown-timer">45s</span>
+          </div>
+        </div>
+
+        <!-- Resumen de Oferta Enviada -->
+        <div class="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-[#0d1117] border border-cardBorder">
+          <div class="flex items-center gap-2">
+            <svg class="w-4 h-4 text-subtext" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M21 18v1c0 1.1-.9 2-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14c1.1 0 2 .9 2 2v1h-9a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+            </svg>
+            <span class="text-xs text-subtext">Tu oferta enviada:</span>
+            <span class="text-xs font-mono font-bold text-emerald-400" id="sent-offer-amount">$10.000 COP</span>
+          </div>
+          <button onclick="cancelOffersSearch()" class="text-xs font-medium text-blue-400 hover:text-blue-300">
+            Editar
+          </button>
+        </div>
+
+        <!-- Lista de Conductores Disponibles -->
+        <div id="driver-cards-container" class="flex flex-col gap-2.5 max-h-[350px] overflow-y-auto pr-0.5">
+          <!-- Inyectado dinámicamente -->
+        </div>
+
+        <!-- Botón Cancelar Solicitud -->
+        <div class="pt-2 flex justify-center">
+          <button onclick="cancelOffersSearch()" class="py-2 px-4 rounded-full text-subtext hover:text-red-400 text-xs font-semibold flex items-center gap-1.5 transition-colors">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
+            <span>Cancelar solicitud</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- PANTALLA 3: EN VIAJE / EN RUTA (Matching Image 5) -->
+      <div id="screen-active-trip" class="hidden relative w-full bg-surfaceCard rounded-t-3xl px-4 pt-3 pb-6 border-t border-cardBorder shadow-2xl flex flex-col gap-3 -mt-5 z-20">
+        <!-- Barra de Seguridad Superior -->
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span>
+            <span class="text-xs font-bold text-blue-400 uppercase tracking-wide">En camino al destino</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <!-- Botón Compartir WhatsApp -->
+            <button onclick="shareTripOnWhatsApp()" class="h-8 px-3 rounded-full bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500 hover:text-black font-semibold text-xs flex items-center gap-1.5 active:scale-95 transition-all">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2z"/>
+              </svg>
+              <span>Compartir</span>
+            </button>
+            <!-- Botón SOS -->
+            <button onclick="openSOSModal()" class="h-8 px-2.5 rounded-full bg-red-500/20 border border-red-500/40 text-red-400 hover:bg-red-500 hover:text-white font-bold text-xs flex items-center gap-1 active:scale-95 transition-all">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/>
+              </svg>
+              <span>SOS</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Tarjeta de Conductor y Vehículo -->
+        <div class="bg-[#0d1117] rounded-2xl p-3.5 border border-cardBorder space-y-3">
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 rounded-full bg-surfaceCard border border-cardBorder flex items-center justify-center text-lg font-bold text-white">
+                M
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h4 class="text-base font-bold text-white leading-tight" id="active-driver-name">Mateo R.</h4>
+                  <div class="flex items-center bg-[#1c2331] px-1.5 py-0.5 rounded text-xs font-semibold text-amber-300">
+                    ★ <span class="ml-0.5" id="active-driver-rating">4.98</span>
+                  </div>
+                </div>
+                <p class="text-xs text-subtext mt-0.5" id="active-driver-veh">Chevrolet Onix 2022 • Negro</p>
+              </div>
+            </div>
+
+            <!-- Placa Colombiana -->
+            <div class="bg-[#1c2331] border border-cardBorder px-2.5 py-1.5 rounded-xl text-center">
+              <span class="block text-[8px] uppercase tracking-wider text-subtext font-medium">Colombia</span>
+              <span class="font-mono text-sm font-bold text-white tracking-widest" id="active-driver-plate">ABC-123</span>
+            </div>
+          </div>
+
+          <!-- Verificación de Seguridad y Ficha de Trazabilidad -->
+          <div class="bg-surfaceCard rounded-xl p-2.5 border border-cardBorder/50 space-y-1.5 text-xs text-slate-300">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-1.5 text-emerald-400 font-semibold text-[11px]">
+                <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/>
+                </svg>
+                <span>Conductor Verificado Legalmente</span>
+              </div>
+              <span class="text-[10px] font-mono text-subtext" id="active-audit-fingerprint">FP-8F29</span>
+            </div>
+            <div class="grid grid-cols-2 gap-1 text-[11px] text-subtext pt-0.5 border-t border-cardBorder/40">
+              <p>Doc: <strong class="text-white" id="active-driver-doc">1037482910</strong></p>
+              <p>Tel: <strong class="text-white" id="active-driver-phone">3001234567</strong></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- PIN DE ABORDAJE SEGURO (4 DÍGITOS) -->
+        <div class="bg-[#11141C] rounded-2xl p-3 border border-emerald-500/40 flex items-center justify-between">
+          <div class="space-y-0.5">
+            <div class="flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span class="text-[10px] uppercase font-bold text-emerald-400 tracking-wider">PIN de Abordaje Seguro</span>
+            </div>
+            <p class="text-[11px] text-subtext">Dáselo al conductor únicamente al subirte</p>
+          </div>
+          <div class="px-3.5 py-1.5 rounded-xl bg-surfaceCard border border-emerald-500/50 font-mono text-xl font-extrabold text-white tracking-widest" id="active-pin-display">
+            4821
+          </div>
+        </div>
+
+        <!-- Destino Final y Pago -->
+        <div class="bg-[#0d1117] rounded-2xl p-3 border border-cardBorder flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <svg class="w-4 h-4 text-emerald-400" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M21 18v1c0 1.1-.9 2-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14c1.1 0 2 .9 2 2v1h-9a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+            </svg>
+            <div>
+              <span class="text-[10px] uppercase text-subtext block font-medium">Método de pago</span>
+              <span class="text-xs text-white font-semibold">Efectivo al finalizar</span>
+            </div>
+          </div>
+          <div class="text-right">
+            <span class="text-[10px] uppercase text-subtext block font-medium">Total a pagar</span>
+            <span class="text-lg font-bold font-mono text-white" id="active-trip-price">$10.000 <span class="text-xs text-subtext font-normal">COP</span></span>
+          </div>
+        </div>
+
+        <!-- Botones de Acción: Llamar / Finalizar -->
+        <div class="grid grid-cols-2 gap-3 pt-1">
+          <button onclick="simulateCall()" class="h-12 bg-surfaceCard hover:bg-cardBorder text-white font-semibold text-sm rounded-xl flex items-center justify-center gap-2 border border-cardBorder active:scale-[0.98]">
+            <svg class="w-4 h-4 text-blue-400" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
+            </svg>
+            <span>Llamar</span>
+          </button>
+          <button onclick="finishTripAndPay()" class="h-12 bg-white hover:bg-slate-200 text-black font-bold text-sm rounded-xl flex items-center justify-center gap-2 active:scale-[0.98] shadow-md">
+            <svg class="w-4 h-4 text-emerald-600" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+            </svg>
+            <span>Finalizar viaje</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- PANTALLA 4: MODO CONDUCTOR (Radar de Viajes) -->
+      <div id="screen-driver-mode" class="hidden relative w-full bg-surfaceCard rounded-t-3xl px-4 pt-3 pb-6 border-t border-cardBorder shadow-2xl flex flex-col gap-3 -mt-5 z-20">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+            <h3 class="text-sm font-bold text-white">Viajes disponibles cerca de ti</h3>
+          </div>
+          <span class="text-xs font-mono text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded">En línea</span>
+        </div>
+
+        <div id="driver-trips-list" class="flex flex-col gap-2.5 max-h-[380px] overflow-y-auto">
+          <!-- Inyectado dinámicamente -->
+        </div>
+      </div>
+    </main>
+
+    <!-- BARRA DE NAVEGACIÓN INFERIOR (Exacto como la imagen del usuario) -->
+    <nav class="fixed bottom-0 w-full max-w-md z-30 bg-appBg/95 backdrop-blur-xl border-t border-cardBorder/60">
+      <div class="h-16 px-6 flex items-center justify-around">
+        <button onclick="switchRole('passenger')" class="flex flex-col items-center justify-center gap-1 text-white font-semibold min-w-[56px]" id="nav-viajar">
+          <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/>
+          </svg>
+          <span class="text-[11px]">Viajar</span>
+        </button>
+
+        <button onclick="goToOffersTab()" class="flex flex-col items-center justify-center gap-1 text-subtext hover:text-white font-medium min-w-[56px]" id="nav-ofertas">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z"/>
+          </svg>
+          <span class="text-[11px]">Ofertas</span>
+        </button>
+
+        <button onclick="openHistoryModal()" class="flex flex-col items-center justify-center gap-1 text-subtext hover:text-white font-medium min-w-[56px]" id="nav-actividad">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/>
+          </svg>
+          <span class="text-[11px]">Actividad</span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- MODAL 1: BIENVENIDA / TU VIAJE EN MINUTOS (Réplica exacta de Image 3) -->
+    <div id="modal-welcome" class="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-md flex items-center justify-center p-5 hidden">
+      <div class="w-full max-w-sm rounded-2xl bg-surfaceCard border border-cardBorder p-5 shadow-2xl space-y-5">
+        <!-- Encabezado con Icono de Navegación -->
+        <div class="flex flex-col items-center text-center pt-2 space-y-3">
+          <div class="w-12 h-12 rounded-2xl bg-white text-black flex items-center justify-center shadow-lg">
+            <svg class="w-6 h-6 text-black" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/>
+            </svg>
+          </div>
+          <div class="space-y-1">
+            <h1 class="text-2xl font-bold tracking-tight text-white">Tu viaje en minutos</h1>
+            <p class="text-xs text-subtext leading-relaxed font-normal">Sin registros complicados ni tarifas ocultas.</p>
+          </div>
+        </div>
+
+        <!-- Inputs de Usuario -->
+        <div class="space-y-4">
+          <div class="space-y-1.5">
+            <label class="block text-xs font-semibold text-subtext uppercase tracking-wider" for="welcome-alias">
+              Tu nombre o apodo
+            </label>
+            <div class="relative flex items-center">
+              <svg class="w-5 h-5 absolute left-3.5 text-subtext pointer-events-none" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+              </svg>
+              <input type="text" id="welcome-alias" maxlength="20" placeholder="Ej. Carlos" class="w-full h-12 pl-11 pr-4 rounded-xl bg-[#0d1117] border border-cardBorder text-white text-sm font-medium placeholder:text-subtext/60 focus:outline-none focus:border-white/50" />
+            </div>
+          </div>
+
+          <!-- Selector Pasajero / Conductor -->
+          <div class="space-y-1.5">
+            <label class="block text-xs font-semibold text-subtext uppercase tracking-wider">
+              ¿Cómo te desplazas hoy?
+            </label>
+            <div class="grid grid-cols-2 gap-2 p-1 bg-[#0d1117] border border-cardBorder rounded-xl">
+              <button type="button" id="role-choice-pass" onclick="selectWelcomeRole('passenger')" class="flex items-center justify-center gap-2 py-3 px-3 rounded-lg bg-surfaceCard border border-white/20 text-white font-semibold text-xs shadow-sm">
+                <span>Pasajero</span>
+              </button>
+              <button type="button" id="role-choice-driv" onclick="selectWelcomeRole('driver')" class="flex items-center justify-center gap-2 py-3 px-3 rounded-lg text-subtext hover:text-white font-semibold text-xs">
+                <span>Conductor</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Botón Comenzar -->
+          <button onclick="saveWelcomeProfile()" class="w-full h-12 rounded-xl bg-white hover:bg-neutral-200 text-black font-bold text-sm flex items-center justify-center gap-2 transition-transform active:scale-[0.98] shadow-lg">
+            <span>Comenzar</span>
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </button>
+        </div>
+
+        <!-- 3 Beneficios Clave (Exacto como la imagen) -->
+        <div class="rounded-xl bg-[#0d1117]/80 border border-cardBorder p-3.5 space-y-2.5">
+          <div class="flex items-center gap-3">
+            <div class="w-6 h-6 rounded-full bg-white/5 flex items-center justify-center shrink-0">
+              <svg class="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M21 18v1c0 1.1-.9 2-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14c1.1 0 2 .9 2 2v1h-9a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+              </svg>
+            </div>
+            <span class="text-xs font-medium text-white/90">Pagas directo en efectivo</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="w-6 h-6 rounded-full bg-white/5 flex items-center justify-center shrink-0">
+              <svg class="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 21v-7m0-4V3m8 18v-9m0-4V3m8 18v-5m0-4V3M1 14h6m2-6h6m2 8h6"/>
+              </svg>
+            </div>
+            <span class="text-xs font-medium text-white/90">Tú decides tu oferta</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="w-6 h-6 rounded-full bg-white/5 flex items-center justify-center shrink-0">
+              <svg class="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+              </svg>
+            </div>
+            <span class="text-xs font-medium text-white/90">Sin comisiones abusivas</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL 2: SOS EMERGENCIA -->
+    <div id="modal-sos" class="fixed inset-0 z-[9999] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 hidden">
+      <div class="w-full max-w-xs bg-surfaceCard border border-red-500/40 rounded-2xl p-5 shadow-2xl text-center space-y-4">
+        <div class="w-12 h-12 mx-auto rounded-full bg-red-500/20 text-red-500 flex items-center justify-center">
+          <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/>
+          </svg>
+        </div>
+        <div>
+          <h3 class="text-base font-bold text-white">¿Necesitas ayuda inmediata?</h3>
+          <p class="text-xs text-subtext mt-1">Llama directamente al 123 o avisa con tus coordenadas a contactos de confianza.</p>
+        </div>
+        <div class="space-y-2">
+          <a href="tel:123" class="w-full h-11 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
+            </svg>
+            <span>Llamar al 123 (Emergencias)</span>
+          </a>
+          <button onclick="shareTripOnWhatsApp(true)" class="w-full h-11 bg-cardBorder text-white font-semibold text-xs rounded-xl flex items-center justify-center gap-2">
+            <span>Avisar coordenadas por WhatsApp</span>
+          </button>
+          <button onclick="closeSOSModal()" class="w-full py-2 text-xs text-subtext hover:text-white">
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL 3: RECIBO DE PAGO EN EFECTIVO AL FINALIZAR -->
+    <div id="modal-receipt" class="fixed inset-0 z-[9999] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 hidden">
+      <div class="w-full max-w-sm bg-surfaceCard border border-cardBorder rounded-2xl p-6 shadow-2xl space-y-4 text-center">
+        <div class="w-12 h-12 mx-auto rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+          <svg class="w-7 h-7" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/>
+          </svg>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-white">Viaje concluido</h3>
+          <p class="text-xs text-subtext">Por favor entrega el monto pactado en efectivo.</p>
+        </div>
+        <div class="bg-[#0d1117] rounded-xl p-4 border border-cardBorder">
+          <span class="text-xs text-subtext uppercase font-semibold">Total a pagar en efectivo</span>
+          <div class="text-3xl font-bold font-mono text-emerald-400 mt-1" id="receipt-amount">$10.000 COP</div>
+        </div>
+        <button onclick="finishReceipt()" class="w-full h-12 bg-white text-black font-bold text-sm rounded-xl">
+          Listo, viaje terminado
+        </button>
+      </div>
+    </div>
+
+    <!-- MODAL 4: ACTIVIDAD / HISTORIAL -->
+    <div id="modal-history" class="fixed inset-0 z-[9999] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 hidden">
+      <div class="w-full max-w-sm bg-surfaceCard border border-cardBorder rounded-2xl p-5 shadow-2xl space-y-4 max-h-[80vh] flex flex-col">
+        <div class="flex items-center justify-between pb-2 border-b border-cardBorder">
+          <h3 class="text-base font-bold text-white">Historial de Viajes</h3>
+          <button onclick="closeHistoryModal()" class="text-subtext hover:text-white">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div class="flex-1 overflow-y-auto space-y-2 pr-1" id="history-list-content">
+          <!-- Inyectado dinámicamente -->
+        </div>
+    <!-- MODAL 5: REGISTRO Y VERIFICACIÓN OBLIGATORIA DE CONDUCTOR (Trazabilidad y Seguridad Legal) -->
+    <div id="modal-driver-verification" class="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 hidden">
+      <div class="w-full max-w-sm rounded-2xl bg-surfaceCard border border-cardBorder p-5 shadow-2xl space-y-4">
+        <div class="text-center space-y-1">
+          <div class="w-12 h-12 mx-auto rounded-2xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 flex items-center justify-center">
+            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/>
+            </svg>
+          </div>
+          <h3 class="text-lg font-bold text-white">Ficha de Conductor</h3>
+          <p class="text-xs text-subtext leading-relaxed">
+            Para seguridad de los pasajeros y trazabilidad legal de cada viaje, registra tus datos oficiales:
+          </p>
+        </div>
+
+        <form id="form-driver-verify" onsubmit="event.preventDefault(); submitDriverVerification();" class="space-y-3">
+          <div class="space-y-1">
+            <label class="block text-[11px] font-semibold text-subtext uppercase">Documento / Cédula de Ciudadanía</label>
+            <input type="text" id="driver-input-doc" required placeholder="Ej. 1037482910" class="w-full h-10 px-3 rounded-xl bg-[#0d1117] border border-cardBorder text-white text-xs font-mono focus:outline-none focus:border-emerald-400" />
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div class="space-y-1">
+              <label class="block text-[11px] font-semibold text-subtext uppercase">Marca y Modelo</label>
+              <input type="text" id="driver-input-model" required placeholder="Chevrolet Onix" class="w-full h-10 px-3 rounded-xl bg-[#0d1117] border border-cardBorder text-white text-xs focus:outline-none focus:border-emerald-400" />
+            </div>
+            <div class="space-y-1">
+              <label class="block text-[11px] font-semibold text-subtext uppercase">Color</label>
+              <input type="text" id="driver-input-color" required placeholder="Negro" class="w-full h-10 px-3 rounded-xl bg-[#0d1117] border border-cardBorder text-white text-xs focus:outline-none focus:border-emerald-400" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div class="space-y-1">
+              <label class="block text-[11px] font-semibold text-subtext uppercase">Placa Oficial</label>
+              <input type="text" id="driver-input-plate" required maxlength="7" placeholder="ABC-123" class="w-full h-10 px-3 rounded-xl bg-[#0d1117] border border-cardBorder text-white text-xs font-mono uppercase tracking-wider focus:outline-none focus:border-emerald-400" />
+            </div>
+            <div class="space-y-1">
+              <label class="block text-[11px] font-semibold text-subtext uppercase">Teléfono Móvil</label>
+              <input type="tel" id="driver-input-phone" required placeholder="300 123 4567" class="w-full h-10 px-3 rounded-xl bg-[#0d1117] border border-cardBorder text-white text-xs font-mono focus:outline-none focus:border-emerald-400" />
+            </div>
+          </div>
+
+          <button type="submit" class="w-full h-11 bg-white hover:bg-slate-200 text-black font-bold text-xs rounded-xl shadow-lg active:scale-95 transition-all mt-2">
+            Guardar y Activar Modo Conductor
+          </button>
+          <button type="button" onclick="cancelDriverVerification()" class="w-full py-2 text-xs text-subtext hover:text-white">
+            Volver a Modo Pasajero
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- MODAL 6: CONDUCTOR DIGITA PIN DE ABORDAJE -->
+    <div id="modal-pin-prompt" class="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 hidden">
+      <div class="w-full max-w-xs rounded-2xl bg-surfaceCard border border-cardBorder p-5 shadow-2xl text-center space-y-4">
+        <div class="w-12 h-12 mx-auto rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center">
+          <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+          </svg>
+        </div>
+        <div>
+          <h3 class="text-base font-bold text-white">Validar Abordaje</h3>
+          <p class="text-xs text-subtext mt-1">Pídele al pasajero el PIN de 4 dígitos para iniciar el viaje:</p>
+        </div>
+        <div class="flex justify-center">
+          <input type="text" id="driver-input-pin" maxlength="4" placeholder="••••" class="w-36 h-12 text-center font-mono font-bold text-2xl tracking-widest rounded-xl bg-[#0d1117] border border-cardBorder text-emerald-400 focus:outline-none focus:border-emerald-400" />
+        </div>
+        <div class="space-y-2">
+          <button onclick="verifyDriverBoardingPin()" class="w-full h-11 bg-white hover:bg-slate-200 text-black font-bold text-xs rounded-xl shadow-lg active:scale-95">
+            Validar e Iniciar Viaje
+          </button>
+          <button onclick="closePinPromptModal()" class="w-full py-1.5 text-xs text-subtext hover:text-white">
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- LÓGICA MODULAR DE LA APLICACIÓN -->
+  <script type="module" src="/src/app.js"></script>
+</body>
+</html>
