@@ -120,12 +120,17 @@ export function getBlockedUsers() {
   }
 }
 
-export function blockUser(userId) {
+export function getLastKnownLocation() {
   try {
-    const list = getBlockedUsers();
-    if (!list.includes(userId)) {
-      list.push(userId);
-      localStorage.setItem(BLOCKED_KEY, JSON.stringify(list));
-    }
+    const raw = localStorage.getItem('rl_last_known_location');
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+export function saveLastKnownLocation(coords) {
+  try {
+    localStorage.setItem('rl_last_known_location', JSON.stringify(coords));
   } catch (e) {}
 }

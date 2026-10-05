@@ -167,7 +167,7 @@ export function calculateSuggestedFare(distanceKm, vehicleType = 'car') {
   const isMoto = vehicleType === 'moto';
   const base = isMoto ? 2500 : 4000;
   const perKm = isMoto ? 1100 : 1800;
-  const minFare = isMoto ? 3500 : 5000;
+  const minFare = isMoto ? 2500 : 4000;
 
   const raw = base + (distanceKm * perKm);
   const rounded = Math.round(raw / 1000) * 1000;
