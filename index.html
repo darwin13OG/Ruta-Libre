@@ -152,6 +152,22 @@
           <div class="w-9 h-1 rounded-full bg-cardBorder"></div>
         </div>
 
+        <!-- Selector de Tipo de Transporte: Carro vs Moto -->
+        <div class="grid grid-cols-2 gap-2 p-1 bg-[#0d1117] border border-cardBorder rounded-2xl">
+          <button type="button" id="vehicle-type-car" onclick="selectVehicleType('car')" class="py-2 px-3 rounded-xl bg-surfaceCard border border-white/20 text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-sm transition-all">
+            <svg class="w-4 h-4 text-blue-400" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/>
+            </svg>
+            <span>Carro</span>
+          </button>
+          <button type="button" id="vehicle-type-moto" onclick="selectVehicleType('moto')" class="py-2 px-3 rounded-xl text-subtext hover:text-white font-semibold text-xs flex items-center justify-center gap-2 transition-all">
+            <svg class="w-4 h-4 text-amber-400" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19 7c-1.66 0-3 1.34-3 3 0 .55.15 1.05.41 1.49L14.07 14H10l-1.5-3.5A2.99 2.99 0 0 0 6 8.5C4.34 8.5 3 9.84 3 11.5c0 1.31.84 2.41 2 2.83V16c0 1.66 1.34 3 3 3 1.31 0 2.42-.84 2.83-2h2.34c.41 1.16 1.52 2 2.83 2 1.66 0 3-1.34 3-3 0-.55-.15-1.05-.41-1.49L20.93 12H21v-2c0-1.66-1.34-3-3-3zM6 13c-.83 0-1.5-.67-1.5-1.5S5.17 10 6 10s1.5.67 1.5 1.5S6.83 13 6 13zm12 4c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+            </svg>
+            <span>Moto (-40%)</span>
+          </button>
+        </div>
+
         <!-- Origen y Destino -->
         <div class="flex flex-col bg-[#0d1117] rounded-2xl p-3 border border-cardBorder divide-y divide-cardBorder/60">
           <!-- Punto de partida -->
@@ -227,12 +243,23 @@
             </button>
           </div>
 
-          <!-- Pago en efectivo -->
-          <div class="flex items-center justify-center gap-1.5 py-1 text-xs text-subtext font-medium">
-            <svg class="w-4 h-4 text-amber-400" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M21 18v1c0 1.1-.9 2-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14c1.1 0 2 .9 2 2v1h-9a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
-            </svg>
-            <span>Pago en efectivo al finalizar</span>
+          <!-- Calculadora de Cambio en Efectivo (Vueltos) -->
+          <div class="bg-[#0d1117] rounded-xl p-2.5 border border-cardBorder space-y-1.5">
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-subtext font-medium flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5 text-amber-400" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M21 18v1c0 1.1-.9 2-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14c1.1 0 2 .9 2 2v1h-9a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+                </svg>
+                ¿Con cuánto pagarás?
+              </span>
+              <span class="text-xs font-mono font-bold text-emerald-400" id="change-due-label">Efectivo exacto</span>
+            </div>
+            <div class="grid grid-cols-4 gap-1.5 pt-0.5">
+              <button type="button" onclick="selectCashBill('exact')" id="btn-bill-exact" class="py-1.5 px-1 rounded-lg bg-surfaceCard border border-white/20 text-white text-[11px] font-semibold font-mono active:scale-95">Exacto</button>
+              <button type="button" onclick="selectCashBill(20000)" id="btn-bill-20k" class="py-1.5 px-1 rounded-lg bg-[#161b22] border border-cardBorder text-subtext hover:text-white text-[11px] font-semibold font-mono active:scale-95">$20k</button>
+              <button type="button" onclick="selectCashBill(50000)" id="btn-bill-50k" class="py-1.5 px-1 rounded-lg bg-[#161b22] border border-cardBorder text-subtext hover:text-white text-[11px] font-semibold font-mono active:scale-95">$50k</button>
+              <button type="button" onclick="selectCashBill(100000)" id="btn-bill-100k" class="py-1.5 px-1 rounded-lg bg-[#161b22] border border-cardBorder text-subtext hover:text-white text-[11px] font-semibold font-mono active:scale-95">$100k</button>
+            </div>
           </div>
         </div>
 
@@ -250,7 +277,7 @@
         <!-- Header Ofertas -->
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
-            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
             <h3 class="text-sm font-bold text-white">Ofertas en curso</h3>
           </div>
           <div class="flex items-center gap-1.5 text-xs text-subtext font-mono">
@@ -277,7 +304,7 @@
 
         <!-- Lista de Conductores Disponibles -->
         <div id="driver-cards-container" class="flex flex-col gap-2.5 max-h-[350px] overflow-y-auto pr-0.5">
-          <!-- Inyectado dinámicamente -->
+          <!-- Inyectado dinámicamente según respuestas P2P reales -->
         </div>
 
         <!-- Botón Cancelar Solicitud -->
@@ -296,7 +323,7 @@
         <!-- Barra de Seguridad Superior -->
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-1.5">
-            <span class="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span>
+            <span class="w-2 h-2 rounded-full bg-blue-400"></span>
             <span class="text-xs font-bold text-blue-400 uppercase tracking-wide">En camino al destino</span>
           </div>
           <div class="flex items-center gap-2">
@@ -317,28 +344,28 @@
           </div>
         </div>
 
-        <!-- Tarjeta de Conductor y Vehículo -->
+        <!-- Tarjeta de Conductor y Vehículo Real -->
         <div class="bg-[#0d1117] rounded-2xl p-3.5 border border-cardBorder space-y-3">
           <div class="flex items-center justify-between gap-3">
             <div class="flex items-center gap-3">
-              <div class="w-12 h-12 rounded-full bg-surfaceCard border border-cardBorder flex items-center justify-center text-lg font-bold text-white">
-                M
+              <div class="w-12 h-12 rounded-full bg-surfaceCard border border-cardBorder flex items-center justify-center text-lg font-bold text-white" id="active-driver-avatar">
+                C
               </div>
               <div>
                 <div class="flex items-center gap-2">
-                  <h4 class="text-base font-bold text-white leading-tight" id="active-driver-name">Mateo R.</h4>
+                  <h4 class="text-base font-bold text-white leading-tight" id="active-driver-name">Conductor Asignado</h4>
                   <div class="flex items-center bg-[#1c2331] px-1.5 py-0.5 rounded text-xs font-semibold text-amber-300">
-                    ★ <span class="ml-0.5" id="active-driver-rating">4.98</span>
+                    ★ <span class="ml-0.5" id="active-driver-rating">5.0</span>
                   </div>
                 </div>
-                <p class="text-xs text-subtext mt-0.5" id="active-driver-veh">Chevrolet Onix 2022 • Negro</p>
+                <p class="text-xs text-subtext mt-0.5" id="active-driver-veh">Vehículo</p>
               </div>
             </div>
 
             <!-- Placa Colombiana -->
             <div class="bg-[#1c2331] border border-cardBorder px-2.5 py-1.5 rounded-xl text-center">
               <span class="block text-[8px] uppercase tracking-wider text-subtext font-medium">Colombia</span>
-              <span class="font-mono text-sm font-bold text-white tracking-widest" id="active-driver-plate">ABC-123</span>
+              <span class="font-mono text-sm font-bold text-white tracking-widest" id="active-driver-plate">---</span>
             </div>
           </div>
 
@@ -351,11 +378,11 @@
                 </svg>
                 <span>Conductor Verificado Legalmente</span>
               </div>
-              <span class="text-[10px] font-mono text-subtext" id="active-audit-fingerprint">FP-8F29</span>
+              <span class="text-[10px] font-mono text-subtext" id="active-audit-fingerprint">FP-PENDIENTE</span>
             </div>
             <div class="grid grid-cols-2 gap-1 text-[11px] text-subtext pt-0.5 border-t border-cardBorder/40">
-              <p>Doc: <strong class="text-white" id="active-driver-doc">1037482910</strong></p>
-              <p>Tel: <strong class="text-white" id="active-driver-phone">3001234567</strong></p>
+              <p>Doc: <strong class="text-white" id="active-driver-doc">--</strong></p>
+              <p>Tel: <strong class="text-white" id="active-driver-phone">--</strong></p>
             </div>
           </div>
         </div>
@@ -364,13 +391,13 @@
         <div class="bg-[#11141C] rounded-2xl p-3 border border-emerald-500/40 flex items-center justify-between">
           <div class="space-y-0.5">
             <div class="flex items-center gap-1.5">
-              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
               <span class="text-[10px] uppercase font-bold text-emerald-400 tracking-wider">PIN de Abordaje Seguro</span>
             </div>
             <p class="text-[11px] text-subtext">Dáselo al conductor únicamente al subirte</p>
           </div>
           <div class="px-3.5 py-1.5 rounded-xl bg-surfaceCard border border-emerald-500/50 font-mono text-xl font-extrabold text-white tracking-widest" id="active-pin-display">
-            4821
+            ----
           </div>
         </div>
 
@@ -391,19 +418,26 @@
           </div>
         </div>
 
-        <!-- Botones de Acción: Llamar / Finalizar -->
-        <div class="grid grid-cols-2 gap-3 pt-1">
-          <button onclick="simulateCall()" class="h-12 bg-surfaceCard hover:bg-cardBorder text-white font-semibold text-sm rounded-xl flex items-center justify-center gap-2 border border-cardBorder active:scale-[0.98]">
+        <!-- Botones de Acción: Chat / Llamar / Finalizar -->
+        <div class="grid grid-cols-3 gap-2 pt-1">
+          <button onclick="openChatModal()" class="relative h-12 bg-surfaceCard hover:bg-cardBorder text-white font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 border border-cardBorder active:scale-[0.98]">
+            <svg class="w-4 h-4 text-emerald-400" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/>
+            </svg>
+            <span>Chat</span>
+            <span id="chat-unread-badge" class="hidden absolute -top-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 text-black text-[10px] font-bold flex items-center justify-center">1</span>
+          </button>
+          <button onclick="simulateCall()" class="h-12 bg-surfaceCard hover:bg-cardBorder text-white font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 border border-cardBorder active:scale-[0.98]">
             <svg class="w-4 h-4 text-blue-400" viewBox="0 0 24 24" fill="currentColor">
               <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
             </svg>
             <span>Llamar</span>
           </button>
-          <button onclick="finishTripAndPay()" class="h-12 bg-white hover:bg-slate-200 text-black font-bold text-sm rounded-xl flex items-center justify-center gap-2 active:scale-[0.98] shadow-md">
+          <button onclick="finishTripAndPay()" class="h-12 bg-white hover:bg-slate-200 text-black font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 active:scale-[0.98] shadow-md">
             <svg class="w-4 h-4 text-emerald-600" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
             </svg>
-            <span>Finalizar viaje</span>
+            <span>Terminar</span>
           </button>
         </div>
       </div>
@@ -412,7 +446,7 @@
       <div id="screen-driver-mode" class="hidden relative w-full bg-surfaceCard rounded-t-3xl px-4 pt-3 pb-6 border-t border-cardBorder shadow-2xl flex flex-col gap-3 -mt-5 z-20">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
-            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
             <h3 class="text-sm font-bold text-white">Viajes disponibles cerca de ti</h3>
           </div>
           <span class="text-xs font-mono text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded">En línea</span>
@@ -618,13 +652,21 @@
 
           <div class="grid grid-cols-2 gap-2">
             <div class="space-y-1">
-              <label class="block text-[11px] font-semibold text-subtext uppercase">Marca y Modelo</label>
-              <input type="text" id="driver-input-model" required placeholder="Chevrolet Onix" class="w-full h-10 px-3 rounded-xl bg-[#0d1117] border border-cardBorder text-white text-xs focus:outline-none focus:border-emerald-400" />
+              <label class="block text-[11px] font-semibold text-subtext uppercase">Tipo Vehículo</label>
+              <select id="driver-input-vtype" class="w-full h-10 px-2 rounded-xl bg-[#0d1117] border border-cardBorder text-white text-xs focus:outline-none focus:border-emerald-400">
+                <option value="car">Carro / Auto</option>
+                <option value="moto">Motocicleta</option>
+              </select>
             </div>
             <div class="space-y-1">
               <label class="block text-[11px] font-semibold text-subtext uppercase">Color</label>
               <input type="text" id="driver-input-color" required placeholder="Negro" class="w-full h-10 px-3 rounded-xl bg-[#0d1117] border border-cardBorder text-white text-xs focus:outline-none focus:border-emerald-400" />
             </div>
+          </div>
+
+          <div class="space-y-1">
+            <label class="block text-[11px] font-semibold text-subtext uppercase">Marca y Modelo</label>
+            <input type="text" id="driver-input-model" required placeholder="Chevrolet Onix / Bajaj Pulsar" class="w-full h-10 px-3 rounded-xl bg-[#0d1117] border border-cardBorder text-white text-xs focus:outline-none focus:border-emerald-400" />
           </div>
 
           <div class="grid grid-cols-2 gap-2">
@@ -671,6 +713,61 @@
             Cancelar
           </button>
         </div>
+      </div>
+    </div>
+
+    <!-- MODAL 7: CHAT P2P EFÍMERO CONDUCTOR ⇄ PASAJERO -->
+    <div id="modal-chat" class="fixed inset-0 z-[9999] bg-black/85 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 hidden">
+      <div class="w-full max-w-sm h-[85vh] sm:h-[600px] rounded-t-3xl sm:rounded-2xl bg-surfaceCard border border-cardBorder shadow-2xl flex flex-col overflow-hidden">
+        <!-- Header del Chat -->
+        <div class="px-4 py-3 bg-[#0d1117] border-b border-cardBorder flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <div class="relative">
+              <div class="w-9 h-9 rounded-full bg-cardBorder flex items-center justify-center text-xs font-bold text-white border border-cardBorder/60" id="chat-peer-avatar">
+                M
+              </div>
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 absolute bottom-0 right-0 border-2 border-[#0d1117]"></span>
+            </div>
+            <div>
+              <h4 class="text-sm font-bold text-white leading-tight" id="chat-peer-name">Mateo R.</h4>
+              <p class="text-[10px] text-emerald-400 font-medium">Canal P2P cifrado en vivo</p>
+            </div>
+          </div>
+          <button onclick="closeChatModal()" class="w-8 h-8 rounded-full flex items-center justify-center text-subtext hover:text-white bg-surfaceCard border border-cardBorder">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+
+        <!-- Contenedor de Mensajes -->
+        <div class="flex-1 overflow-y-auto p-4 space-y-2.5" id="chat-messages-container">
+          <div class="text-center py-2">
+            <span class="px-3 py-1 rounded-full bg-[#0d1117] border border-cardBorder text-[10px] text-subtext">Chat efímero: los mensajes se destruyen al finalizar</span>
+          </div>
+        </div>
+
+        <!-- Respuestas Rápidas -->
+        <div class="px-3 py-2 bg-[#0d1117]/60 border-t border-cardBorder/40 overflow-x-auto flex items-center gap-1.5 no-scrollbar">
+          <button type="button" onclick="sendQuickChatMessage('Ya voy bajando')" class="whitespace-nowrap px-2.5 py-1 rounded-full bg-surfaceCard hover:bg-cardBorder text-slate-300 text-[11px] font-medium border border-cardBorder shrink-0 active:scale-95">
+            Ya voy bajando
+          </button>
+          <button type="button" onclick="sendQuickChatMessage('Estoy en la esquina')" class="whitespace-nowrap px-2.5 py-1 rounded-full bg-surfaceCard hover:bg-cardBorder text-slate-300 text-[11px] font-medium border border-cardBorder shrink-0 active:scale-95">
+            Estoy en la esquina
+          </button>
+          <button type="button" onclick="sendQuickChatMessage('Tengo intermitentes')" class="whitespace-nowrap px-2.5 py-1 rounded-full bg-surfaceCard hover:bg-cardBorder text-slate-300 text-[11px] font-medium border border-cardBorder shrink-0 active:scale-95">
+            Tengo intermitentes
+          </button>
+          <button type="button" onclick="sendQuickChatMessage('¿Color de tu ropa?')" class="whitespace-nowrap px-2.5 py-1 rounded-full bg-surfaceCard hover:bg-cardBorder text-slate-300 text-[11px] font-medium border border-cardBorder shrink-0 active:scale-95">
+            ¿Color de ropa?
+          </button>
+        </div>
+
+        <!-- Input de Envío -->
+        <form onsubmit="event.preventDefault(); submitChatMessage();" class="p-3 bg-[#0d1117] border-t border-cardBorder flex items-center gap-2">
+          <input type="text" id="chat-input-text" maxlength="200" placeholder="Escribe un mensaje..." class="flex-1 h-11 px-3.5 rounded-xl bg-surfaceCard border border-cardBorder text-white text-xs placeholder:text-subtext/60 focus:outline-none focus:border-emerald-400" />
+          <button type="submit" class="w-11 h-11 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black flex items-center justify-center shrink-0 active:scale-95 transition-all shadow-md">
+            <svg class="w-4 h-4 rotate-45" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+          </button>
+        </form>
       </div>
     </div>
 

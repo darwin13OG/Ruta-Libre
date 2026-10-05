@@ -159,15 +159,17 @@ export async function getRealDrivingRoute(start, end) {
 
 /**
  * Tarifa sugerida transparente y justa en efectivo (COP)
- * - Base arranque: $4.000 COP
- * - Costo por km de vía: $1.800 COP
- * - Mínimo: $5.000 COP
+ * - Carro: Base $4.000 COP, $1.800/km, Mínimo $5.000 COP
+ * - Moto: Base $2.500 COP, $1.100/km (~40% de descuento), Mínimo $3.500 COP
  * - Redondeo a miles para facilidad en efectivo
  */
-export function calculateSuggestedFare(distanceKm) {
-  const base = 4000;
-  const perKm = 1800;
+export function calculateSuggestedFare(distanceKm, vehicleType = 'car') {
+  const isMoto = vehicleType === 'moto';
+  const base = isMoto ? 2500 : 4000;
+  const perKm = isMoto ? 1100 : 1800;
+  const minFare = isMoto ? 3500 : 5000;
+
   const raw = base + (distanceKm * perKm);
   const rounded = Math.round(raw / 1000) * 1000;
-  return Math.max(5000, rounded);
+  return Math.max(minFare, rounded);
 }
