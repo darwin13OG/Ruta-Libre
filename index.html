@@ -8,6 +8,12 @@
   <meta name="theme-color" content="#0B0E14" />
   <link rel="canonical" href="https://ruta-libre.pages.dev/" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="apple-touch-icon" href="/favicon.svg" />
+  <link id="manifest-link" rel="manifest" href="/manifest.json" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Ruta Libre" />
 
   <!-- Open Graph / Facebook / WhatsApp / Telegram -->
   <meta property="og:type" content="website" />
@@ -134,27 +140,39 @@
     <!-- HEADER SUPERIOR (Exacto como el diseño del usuario) -->
     <header class="sticky top-0 z-30 bg-appBg/95 backdrop-blur-xl border-b border-cardBorder/60 px-4 py-3 flex items-center justify-between">
       <div class="flex items-center gap-2.5">
-        <div class="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center font-bold shadow-sm">
-          <!-- Car SVG Icon -->
-          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/>
+        <div id="header-brand-icon" class="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center font-bold shadow-sm">
+          <svg class="w-4 h-4 text-black" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/>
           </svg>
         </div>
-        <span class="text-base font-bold tracking-tight text-white" id="header-title">Solicitar viaje</span>
+        <div>
+          <span class="text-base font-bold tracking-tight text-white block leading-tight" id="header-title">Solicitar viaje</span>
+          <span class="text-[10px] text-emerald-400 font-mono font-medium block leading-none" id="header-subtitle">Modo Pasajero</span>
+        </div>
       </div>
 
-      <!-- Selector de Modo y Perfil -->
-      <div class="flex items-center gap-2">
+      <!-- Selector de Modo, Instalar PWA y Perfil -->
+      <div class="flex items-center gap-1.5">
+        <!-- Botón Instalar PWA en Header -->
+        <button id="btn-pwa-header" onclick="openPWAInstallModal()" class="px-2 py-1 rounded-lg bg-[#161B22] border border-cardBorder text-[11px] font-semibold text-slate-200 hover:text-white flex items-center gap-1 active:scale-95 transition-all" title="Instalar aplicación en tu pantalla de inicio">
+          <svg class="w-3.5 h-3.5 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          <span id="btn-pwa-header-label">Instalar</span>
+        </button>
+
         <div class="flex items-center bg-[#11141C] border border-cardBorder p-0.5 rounded-xl text-xs">
-          <button id="toggle-pass" onclick="switchRole('passenger')" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-white text-black transition-all">
+          <button id="toggle-pass" onclick="switchRole('passenger')" class="px-2 py-1 rounded-lg text-xs font-semibold bg-white text-black transition-all">
             Viajar
           </button>
-          <button id="toggle-driv" onclick="switchRole('driver')" class="px-2.5 py-1 rounded-lg text-xs font-semibold text-subtext hover:text-white transition-all">
+          <button id="toggle-driv" onclick="switchRole('driver')" class="px-2 py-1 rounded-lg text-xs font-semibold text-subtext hover:text-white transition-all">
             Conducir
           </button>
         </div>
 
-        <button onclick="openProfileModal()" class="w-8 h-8 rounded-full overflow-hidden border border-cardBorder focus:outline-none flex items-center justify-center bg-cardBorder text-xs font-bold text-white">
+        <button onclick="openProfileModal()" class="w-8 h-8 rounded-full overflow-hidden border border-cardBorder focus:outline-none flex items-center justify-center bg-cardBorder text-xs font-bold text-white shrink-0">
           <span id="header-avatar-initial">C</span>
         </button>
       </div>
@@ -639,10 +657,201 @@
           </div>
         </div>
       </div>
+
+      <!-- PANTALLA 5: ESTADÍSTICAS DEL CONDUCTOR (Exclusivo Modo Conductor) -->
+      <div id="screen-driver-stats" class="hidden relative w-full bg-surfaceCard rounded-t-3xl px-4 pt-4 pb-6 border-t border-cardBorder shadow-2xl flex flex-col gap-3 -mt-5 z-20">
+        <!-- Header de Estadísticas -->
+        <div class="flex items-center justify-between pb-1 border-b border-cardBorder/50">
+          <div>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-400">Panel de Rendimiento</span>
+            <h2 class="text-base font-bold text-white">Estadísticas de Conductor</h2>
+          </div>
+          <span class="px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-mono text-xs font-bold">
+            0% Comisión
+          </span>
+        </div>
+
+        <!-- Tarjeta de Ganancias de Hoy -->
+        <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#111827] via-[#0d141e] to-[#091017] border border-emerald-500/30 p-4 shadow-xl">
+          <div class="absolute -right-6 -bottom-6 w-28 h-28 rounded-full bg-emerald-500/10 blur-2xl pointer-events-none"></div>
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs text-subtext font-semibold uppercase tracking-wider">Ganancias Netas Hoy</span>
+            <span class="text-[11px] text-emerald-400 font-medium flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> 100% en efectivo
+            </span>
+          </div>
+          <div class="flex items-baseline gap-2">
+            <span class="text-3xl font-extrabold font-mono text-emerald-400" id="driver-stats-earnings">$64.500</span>
+            <span class="text-xs font-bold text-subtext font-mono">COP</span>
+          </div>
+          <p class="text-[11px] text-subtext mt-1">El 100% de la tarifa va a tu bolsillo sin intermediarios ni retenciones.</p>
+        </div>
+
+        <!-- Tarjeta de Ahorro en Comisiones -->
+        <div class="rounded-xl bg-[#0d1117] border border-cardBorder p-3 flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center text-emerald-400">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+              </svg>
+            </div>
+            <div>
+              <span class="text-[10px] uppercase font-bold text-subtext">Ahorro frente a otras apps</span>
+              <p class="text-xs font-semibold text-slate-200">Ahorraste ~$19.350 COP en comisiones</p>
+            </div>
+          </div>
+          <span class="text-xs font-mono font-bold text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded">
+            +30% neto
+          </span>
+        </div>
+
+        <!-- Cuadrícula de Métricas Clave -->
+        <div class="grid grid-cols-2 gap-2">
+          <!-- Viajes Completados -->
+          <div class="rounded-xl bg-[#0d1117] border border-cardBorder p-3 space-y-1">
+            <span class="text-[10px] font-semibold text-subtext uppercase">Viajes hoy</span>
+            <div class="flex items-baseline gap-1">
+              <span class="text-xl font-bold font-mono text-white" id="driver-stats-trips">5</span>
+              <span class="text-[11px] text-subtext">viajes</span>
+            </div>
+          </div>
+
+          <!-- Tiempo Conectado -->
+          <div class="rounded-xl bg-[#0d1117] border border-cardBorder p-3 space-y-1">
+            <span class="text-[10px] font-semibold text-subtext uppercase">Tiempo en línea</span>
+            <div class="flex items-baseline gap-1">
+              <span class="text-xl font-bold font-mono text-white" id="driver-stats-hours">3h 45m</span>
+            </div>
+          </div>
+
+          <!-- Tasa de Aceptación -->
+          <div class="rounded-xl bg-[#0d1117] border border-cardBorder p-3 space-y-1">
+            <span class="text-[10px] font-semibold text-subtext uppercase">Aceptación</span>
+            <div class="flex items-baseline gap-1">
+              <span class="text-xl font-bold font-mono text-blue-400" id="driver-stats-rate">98%</span>
+            </div>
+          </div>
+
+          <!-- Calificación -->
+          <div class="rounded-xl bg-[#0d1117] border border-cardBorder p-3 space-y-1">
+            <span class="text-[10px] font-semibold text-subtext uppercase">Calificación</span>
+            <div class="flex items-baseline gap-1">
+              <span class="text-xl font-bold font-mono text-amber-400" id="driver-stats-rating">4.95 ★</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Lista de Viajes Concluidos de la Jornada -->
+        <div class="space-y-2 pt-1">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-white">Viajes del día</span>
+            <span class="text-[11px] text-subtext font-mono">Últimas 24h</span>
+          </div>
+          <div class="flex flex-col gap-2 max-h-[160px] overflow-y-auto" id="driver-completed-trips-list">
+            <!-- Inyectado dinámicamente -->
+            <div class="rounded-xl bg-[#0d1117] border border-cardBorder p-2.5 flex items-center justify-between text-xs">
+              <div>
+                <span class="font-bold text-white">El Poblado ➔ CC Santafé</span>
+                <p class="text-[10px] text-subtext">14:20 • 2.4 km • Efectivo</p>
+              </div>
+              <span class="font-mono font-bold text-emerald-400">$10.000 COP</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANTALLA 6: HERRAMIENTAS DEL CONDUCTOR (Calculadora de Cambio Rápida, Filtros y Ficha) -->
+      <div id="screen-driver-tools" class="hidden relative w-full bg-surfaceCard rounded-t-3xl px-4 pt-4 pb-6 border-t border-cardBorder shadow-2xl flex flex-col gap-3.5 -mt-5 z-20">
+        <!-- Header de Herramientas -->
+        <div class="flex items-center justify-between pb-1 border-b border-cardBorder/50">
+          <div>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-blue-400">Herramientas de Conducción</span>
+            <h2 class="text-base font-bold text-white">Caja y Asistencia en Ruta</h2>
+          </div>
+          <button onclick="switchRole('passenger')" class="text-xs text-subtext hover:text-white flex items-center gap-1 font-semibold">
+            <span>Pedir viaje</span> ➔
+          </button>
+        </div>
+
+        <!-- 1. CALCULADORA RÁPIDA DE VUELTOS (Para Dar Cambio Inmediato al Pasajero) -->
+        <div class="rounded-2xl bg-[#0d1117] border border-cardBorder p-3.5 space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <div class="w-6 h-6 rounded-md bg-blue-500/20 text-blue-400 flex items-center justify-center">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="4" y="2" width="16" height="20" rx="2"></rect><line x1="8" y1="6" x2="16" y2="6"></line><line x1="16" y1="14" x2="16" y2="18"></line>
+                </svg>
+              </div>
+              <span class="text-xs font-bold text-white">Calculadora Rápida de Cambio</span>
+            </div>
+            <span class="text-[10px] text-subtext">Al recibir efectivo</span>
+          </div>
+
+          <!-- Tarifa pactada -->
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[10px] text-subtext uppercase font-semibold">Tarifa del viaje</label>
+              <input type="number" id="calc-tool-fare" value="12000" step="500" oninput="calculateDriverQuickChange()" class="w-full h-10 px-3 rounded-xl bg-surfaceCard border border-cardBorder text-white text-xs font-mono font-bold focus:outline-none focus:border-blue-400" />
+            </div>
+            <div>
+              <label class="block text-[10px] text-subtext uppercase font-semibold">Billete recibido</label>
+              <input type="number" id="calc-tool-received" value="20000" step="1000" oninput="calculateDriverQuickChange()" class="w-full h-10 px-3 rounded-xl bg-surfaceCard border border-cardBorder text-white text-xs font-mono font-bold focus:outline-none focus:border-blue-400" />
+            </div>
+          </div>
+
+          <!-- Botones Rápidos de Billetes Colombianos -->
+          <div class="space-y-1">
+            <span class="text-[10px] text-subtext">Selecciona billete que te entregaron:</span>
+            <div class="grid grid-cols-4 gap-1.5">
+              <button type="button" onclick="setReceivedBillCalc(10000)" class="py-1.5 rounded-lg bg-surfaceCard hover:bg-cardBorder text-[11px] font-mono font-semibold text-slate-200 border border-cardBorder active:scale-95">$10k</button>
+              <button type="button" onclick="setReceivedBillCalc(20000)" class="py-1.5 rounded-lg bg-surfaceCard hover:bg-cardBorder text-[11px] font-mono font-semibold text-slate-200 border border-cardBorder active:scale-95">$20k</button>
+              <button type="button" onclick="setReceivedBillCalc(50000)" class="py-1.5 rounded-lg bg-surfaceCard hover:bg-cardBorder text-[11px] font-mono font-semibold text-slate-200 border border-cardBorder active:scale-95">$50k</button>
+              <button type="button" onclick="setReceivedBillCalc(100000)" class="py-1.5 rounded-lg bg-surfaceCard hover:bg-cardBorder text-[11px] font-mono font-semibold text-slate-200 border border-cardBorder active:scale-95">$100k</button>
+            </div>
+          </div>
+
+          <!-- Resultado de Vuelto Inmediato -->
+          <div class="rounded-xl bg-[#090d14] border border-emerald-500/30 p-3 flex items-center justify-between">
+            <div>
+              <span class="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block">Vuelto a devolver al pasajero</span>
+              <span class="text-xs text-subtext" id="calc-tool-breakdown">Devolver 1 billete de $5.000 + 3 de $1.000</span>
+            </div>
+            <span class="text-xl font-bold font-mono text-emerald-400" id="calc-tool-result">$8.000 COP</span>
+          </div>
+        </div>
+
+        <!-- 2. FICHA Y MODO DE VEHÍCULO -->
+        <div class="rounded-2xl bg-[#0d1117] border border-cardBorder p-3.5 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-white">Vehículo Activo</span>
+            <button onclick="checkDriverVerificationOrPrompt()" class="text-[11px] text-blue-400 hover:underline">
+              Editar ficha
+            </button>
+          </div>
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div class="rounded-xl bg-surfaceCard border border-cardBorder p-2.5 space-y-0.5">
+              <span class="text-[10px] text-subtext block uppercase">Placa oficial</span>
+              <span class="font-mono font-bold text-white text-sm" id="tool-driver-plate">ABC-123</span>
+            </div>
+            <div class="rounded-xl bg-surfaceCard border border-cardBorder p-2.5 space-y-0.5">
+              <span class="text-[10px] text-subtext block uppercase">Tipo / Modelo</span>
+              <span class="font-semibold text-white truncate block" id="tool-driver-model">Carro Particular</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. BOTÓN PARA PASAR A MODO PASAJERO -->
+        <button onclick="switchRole('passenger')" class="w-full h-11 rounded-xl bg-surfaceCard hover:bg-cardBorder border border-cardBorder text-slate-200 font-bold text-xs flex items-center justify-center gap-2 active:scale-95 transition-all">
+          <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99z"/>
+          </svg>
+          <span>Cambiar a Modo Pasajero (Pedir Viaje)</span>
+        </button>
+      </div>
     </main>
 
-    <!-- BARRA DE NAVEGACIÓN INFERIOR (Exacto como la imagen del usuario) -->
-    <nav class="fixed bottom-0 w-full max-w-md z-30 bg-appBg/95 backdrop-blur-xl border-t border-cardBorder/60">
+    <!-- BARRA DE NAVEGACIÓN INFERIOR (PASAJERO) -->
+    <nav id="nav-passenger" class="fixed bottom-0 w-full max-w-md z-30 bg-appBg/95 backdrop-blur-xl border-t border-cardBorder/60">
       <div class="h-16 px-6 flex items-center justify-around">
         <button onclick="switchRole('passenger')" class="flex flex-col items-center justify-center gap-1 text-white font-semibold min-w-[56px]" id="nav-viajar">
           <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
@@ -663,6 +872,45 @@
             <path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/>
           </svg>
           <span class="text-[11px]">Actividad</span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- BARRA DE NAVEGACIÓN INFERIOR (CONDUCTOR) -->
+    <nav id="nav-driver" class="hidden fixed bottom-0 w-full max-w-md z-30 bg-appBg/95 backdrop-blur-xl border-t border-cardBorder/60">
+      <div class="h-16 px-6 flex items-center justify-around">
+        <button onclick="switchDriverTab('radar')" class="flex flex-col items-center justify-center gap-1 text-emerald-400 font-semibold min-w-[56px]" id="nav-driver-btn-radar">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path>
+            <path d="M2 12h20"></path>
+          </svg>
+          <span class="text-[11px]">Radar</span>
+        </button>
+
+        <button onclick="switchDriverTab('stats')" class="flex flex-col items-center justify-center gap-1 text-subtext hover:text-white font-medium min-w-[56px]" id="nav-driver-btn-stats">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="20" x2="18" y2="10"></line>
+            <line x1="12" y1="20" x2="12" y2="4"></line>
+            <line x1="6" y1="20" x2="6" y2="14"></line>
+          </svg>
+          <span class="text-[11px]">Estadísticas</span>
+        </button>
+
+        <button onclick="switchDriverTab('tools')" class="flex flex-col items-center justify-center gap-1 text-subtext hover:text-white font-medium min-w-[56px]" id="nav-driver-btn-tools">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="4" y="2" width="16" height="20" rx="2"></rect>
+            <line x1="8" y1="6" x2="16" y2="6"></line>
+            <line x1="16" y1="14" x2="16" y2="18"></line>
+            <path d="M16 10h.01"></path>
+            <path d="M12 10h.01"></path>
+            <path d="M8 10h.01"></path>
+            <path d="M12 14h.01"></path>
+            <path d="M8 14h.01"></path>
+            <path d="M12 18h.01"></path>
+            <path d="M8 18h.01"></path>
+          </svg>
+          <span class="text-[11px]">Herramientas</span>
         </button>
       </div>
     </nav>
@@ -951,6 +1199,116 @@
             <svg class="w-4 h-4 rotate-45" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
           </button>
         </form>
+      </div>
+    </div>
+
+    <!-- MODAL 8: INSTALAR APLICACIÓN PWA (Pasajero vs Conductor) -->
+    <div id="modal-pwa-install" class="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 hidden">
+      <div class="w-full max-w-sm rounded-3xl bg-surfaceCard border border-cardBorder p-5 shadow-2xl space-y-4">
+        <div class="flex items-center justify-between pb-2 border-b border-cardBorder/60">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-xl bg-white text-black flex items-center justify-center font-bold">
+              <svg class="w-4 h-4 text-black" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/>
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-sm font-bold text-white">Instalar en tu Celular</h3>
+              <p class="text-[10px] text-subtext">Aplicación Web Progresiva (PWA)</p>
+            </div>
+          </div>
+          <button onclick="closePWAInstallModal()" class="w-7 h-7 rounded-lg bg-surfaceCard hover:bg-cardBorder text-subtext hover:text-white flex items-center justify-center border border-cardBorder">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+
+        <p class="text-xs text-slate-300 leading-relaxed">
+          Elige qué versión de la aplicación deseas instalar como acceso directo independiente en tu pantalla de inicio:
+        </p>
+
+        <!-- Opción 1: Ruta Libre (Pasajeros) -->
+        <div onclick="installPWAByChoice('passenger')" class="group cursor-pointer rounded-2xl bg-[#0d1117] hover:bg-[#111622] border border-cardBorder hover:border-blue-500/50 p-3.5 transition-all space-y-1.5 active:scale-[0.98]">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <div class="w-9 h-9 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold">
+                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99z"/>
+                </svg>
+              </div>
+              <div>
+                <h4 class="text-xs font-bold text-white group-hover:text-blue-400 transition-colors">Ruta Libre (Pasajeros)</h4>
+                <span class="text-[10px] text-subtext">Tu viaje en minutos • Efectivo directo</span>
+              </div>
+            </div>
+            <span class="px-2 py-1 rounded-lg bg-blue-500/15 text-blue-400 font-bold text-[10px]">Instalar</span>
+          </div>
+          <p class="text-[10px] text-slate-400">Pide viajes directos, negocia tarifas en tiempo real y viaja sin comisiones abusivas.</p>
+        </div>
+
+        <!-- Opción 2: Ruta Libre Driver (Conductores) -->
+        <div onclick="installPWAByChoice('driver')" class="group cursor-pointer rounded-2xl bg-[#0d1117] hover:bg-[#111622] border border-cardBorder hover:border-emerald-500/50 p-3.5 transition-all space-y-1.5 active:scale-[0.98]">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <div class="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/>
+                </svg>
+              </div>
+              <div>
+                <h4 class="text-xs font-bold text-white group-hover:text-emerald-400 transition-colors">Ruta Libre Driver (Conductores)</h4>
+                <span class="text-[10px] text-emerald-400 font-medium">0% Comisión • Ganancias 100% tuyas</span>
+              </div>
+            </div>
+            <span class="px-2 py-1 rounded-lg bg-emerald-500/15 text-emerald-400 font-bold text-[10px]">Instalar</span>
+          </div>
+          <p class="text-[10px] text-slate-400">Radar de ofertas en mapa, calculadora de vueltos, estadísticas y cobro directo en efectivo.</p>
+        </div>
+
+        <!-- Guía iOS Safari si aplica -->
+        <div id="ios-pwa-guide" class="hidden rounded-xl bg-[#0d1117]/60 border border-cardBorder/60 p-3 text-[11px] text-subtext space-y-1">
+          <p class="text-slate-200 font-semibold">¿Usas iPhone / iPad (Safari)?</p>
+          <p>1. Toca el botón <strong>Compartir</strong> (icono de cuadrado con flecha abajo).</p>
+          <p>2. Selecciona <strong>"Agregar al inicio"</strong>.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- PANTALLA COMPLETA DE BLOQUEO SIN INTERNET (Obligatorio hasta tener conexión) -->
+    <div id="offline-blocker" class="fixed inset-0 z-[100000] bg-[#07090D]/95 backdrop-blur-2xl flex items-center justify-center p-6 hidden select-none">
+      <div class="w-full max-w-sm rounded-3xl bg-surfaceCard border border-cardBorder p-6 shadow-2xl flex flex-col items-center text-center space-y-4">
+        <!-- Icono Animado de Radar Sin Conexión -->
+        <div class="relative flex items-center justify-center my-1">
+          <div class="w-20 h-20 rounded-full bg-red-500/15 animate-ping absolute"></div>
+          <div class="w-16 h-16 rounded-2xl bg-[#0d1117] border border-red-500/30 flex items-center justify-center text-red-400 shadow-xl">
+            <svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="1" y1="1" x2="23" y2="23"></line>
+              <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"></path>
+              <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"></path>
+              <path d="M10.71 5.05A16 16 0 0 1 22.56 9"></path>
+              <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"></path>
+              <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+              <line x1="12" y1="20" x2="12.01" y2="20"></line>
+            </svg>
+          </div>
+        </div>
+
+        <div class="space-y-1.5">
+          <h2 class="text-xl font-extrabold tracking-tight text-white">Sin conexión a Internet</h2>
+          <p class="text-xs text-subtext leading-relaxed">
+            Ruta Libre es una red de transporte descentralizada en tiempo real. Se requiere acceso a internet para ubicar tu GPS, sincronizar viajes P2P y negociar ofertas directas.
+          </p>
+        </div>
+
+        <!-- Indicador de Espera -->
+        <div class="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#0d1117] border border-cardBorder text-xs font-mono text-amber-400">
+          <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+          <span id="offline-status-text">Esperando señal de red...</span>
+        </div>
+
+        <button onclick="checkAndRetryConnection()" id="btn-retry-connection" class="w-full h-11 rounded-xl bg-white hover:bg-slate-200 text-black font-bold text-xs flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          <span>Reintentar conexión</span>
+        </button>
       </div>
     </div>
 

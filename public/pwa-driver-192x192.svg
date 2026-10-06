@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" fill="none">
+  <!-- Fondo Squircle Oscuro con borde verde esmeralda para Conductor -->
+  <rect width="192" height="192" rx="42" fill="#0B0E14" />
+  <rect x="3" y="3" width="186" height="186" rx="39" stroke="#10B981" stroke-width="4" stroke-opacity="0.6" />
+  
+  <!-- Radar GPS de Conductor -->
+  <circle cx="96" cy="85" r="54" stroke="#10B981" stroke-width="2.5" stroke-opacity="0.35" stroke-dasharray="5 5" />
+  
+  <!-- Flecha GPS de Navegación Exacta -->
+  <g transform="translate(96 85) scale(4.4) translate(-12 -12)">
+    <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z" fill="#FFFFFF" />
+    <circle cx="12" cy="3" r="2" fill="#10B981" />
+  </g>
+  
+  <!-- Badge DRIVER inferior -->
+  <rect x="44" y="148" width="104" height="26" rx="13" fill="#10B981" />
+  <text x="96" y="165" font-family="'Plus Jakarta Sans', -apple-system, sans-serif" font-size="13" font-weight="800" fill="#000000" text-anchor="middle" letter-spacing="1.5">DRIVER</text>
+</svg>

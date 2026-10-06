@@ -1,7 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
-  <rect width="64" height="64" rx="16" fill="#0B0E14" />
-  <circle cx="32" cy="32" r="28" stroke="#21262D" stroke-width="2" />
-  <!-- Car silhouette in emerald and white -->
-  <path d="M47.8 22.02C47.4 20.84 46.28 20 44.96 20H19.04C17.72 20 16.6 20.84 16.2 22.02L10 40V56C10 57.1 10.9 58 12 58H14C15.1 58 16 57.1 16 56V54H48V56C48 57.1 48.9 58 50 58H52C53.1 58 54 57.1 54 56V40L47.8 22.02ZM17 48C15.34 48 14 46.66 14 45C14 43.34 15.34 42 17 42C18.66 42 20 43.34 20 45C20 46.66 18.66 48 17 48ZM47 48C45.34 48 44 46.66 44 45C44 43.34 45.34 42 47 42C48.66 42 50 43.34 50 45C50 46.66 48.66 48 47 48ZM14 38L17 28H47L50 38H14Z" fill="#10B981"/>
-  <circle cx="32" cy="12" r="4" fill="#3B82F6"/>
+  <!-- Fondo Squircle Oscuro Elegante -->
+  <rect width="64" height="64" rx="18" fill="#0B0E14" />
+  <rect x="1.5" y="1.5" width="61" height="61" rx="16.5" stroke="#21262D" stroke-width="2" />
+  
+  <!-- Resplandor sutil de radar -->
+  <circle cx="32" cy="32" r="22" stroke="#10B981" stroke-width="1.5" stroke-opacity="0.25" stroke-dasharray="3 3" />
+  
+  <!-- Flecha GPS de Navegación Exacta del Inicio de la App -->
+  <!-- Coordenadas escaladas de M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z (viewBox 24 a 64) -->
+  <g transform="translate(32 32) scale(1.7) translate(-12 -12)">
+    <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z" fill="#FFFFFF" />
+    <!-- Vértice activo con pulso esmeralda -->
+    <circle cx="12" cy="3" r="1.8" fill="#10B981" />
+  </g>
 </svg>

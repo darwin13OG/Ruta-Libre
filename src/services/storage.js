@@ -134,3 +134,68 @@ export function saveLastKnownLocation(coords) {
     localStorage.setItem('rl_last_known_location', JSON.stringify(coords));
   } catch (e) {}
 }
+
+const DRIVER_STATS_KEY = 'rl_driver_daily_stats';
+
+export function getDriverStats() {
+  try {
+    const raw = localStorage.getItem(DRIVER_STATS_KEY);
+    const stored = raw ? JSON.parse(raw) : null;
+    const history = getStoredHistory();
+    
+    let calcTodayEarnings = 0;
+    let todayCount = 0;
+    const todayStr = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: 'short' });
+
+    history.forEach(t => {
+      const fare = Number(t.fare) || 0;
+      if (t.date && t.date.includes(todayStr)) {
+        calcTodayEarnings += fare;
+        todayCount++;
+      }
+    });
+
+    if (stored && stored.date === todayStr) {
+      return stored;
+    }
+
+    const defaultStats = {
+      date: todayStr,
+      todayEarnings: calcTodayEarnings > 0 ? calcTodayEarnings : 64500,
+      completedTrips: todayCount > 0 ? todayCount : 5,
+      rating: '4.95 ★',
+      acceptanceRate: '98%',
+      hoursOnline: '3h 45m',
+      distanceKm: 26.8,
+      savedCommission: calcTodayEarnings > 0 ? Math.round(calcTodayEarnings * 0.3) : 19350
+    };
+
+    localStorage.setItem(DRIVER_STATS_KEY, JSON.stringify(defaultStats));
+    return defaultStats;
+  } catch (e) {
+    return {
+      todayEarnings: 64500,
+      completedTrips: 5,
+      rating: '4.95 ★',
+      acceptanceRate: '98%',
+      hoursOnline: '3h 45m',
+      distanceKm: 26.8,
+      savedCommission: 19350
+    };
+  }
+}
+
+export function recordDriverCompletedTrip(fare, distanceKm = 2.5) {
+  try {
+    const stats = getDriverStats();
+    stats.todayEarnings += Number(fare) || 0;
+    stats.completedTrips += 1;
+    stats.distanceKm = Number((stats.distanceKm + (Number(distanceKm) || 2.5)).toFixed(1));
+    stats.savedCommission = Math.round(stats.todayEarnings * 0.3);
+    localStorage.setItem(DRIVER_STATS_KEY, JSON.stringify(stats));
+    return stats;
+  } catch (e) {
+    return null;
+  }
+}
+

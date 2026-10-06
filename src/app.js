@@ -27,7 +27,9 @@ import {
   getStoredDriverInfo,
   saveStoredDriverInfo,
   getLastKnownLocation,
-  saveLastKnownLocation
+  saveLastKnownLocation,
+  getDriverStats,
+  recordDriverCompletedTrip
 } from './services/storage.js';
 import { audioService } from './services/audio.js';
 
@@ -850,14 +852,30 @@ function setDriverModeActive() {
   const bPass = document.getElementById('toggle-pass');
   const bDriv = document.getElementById('toggle-driv');
 
-  bDriv.className = 'px-2.5 py-1 rounded-lg text-xs font-semibold bg-white text-black transition-all';
-  bPass.className = 'px-2.5 py-1 rounded-lg text-xs font-semibold text-subtext hover:text-white transition-all';
-  document.getElementById('header-title').textContent = 'Radar de conductor';
+  if (bDriv) bDriv.className = 'px-2.5 py-1 rounded-lg text-xs font-semibold bg-white text-black transition-all';
+  if (bPass) bPass.className = 'px-2.5 py-1 rounded-lg text-xs font-semibold text-subtext hover:text-white transition-all';
+  
+  const titleEl = document.getElementById('header-title');
+  const subEl = document.getElementById('header-subtitle');
+  const pwaLabel = document.getElementById('btn-pwa-header-label');
+  const manifestLink = document.getElementById('manifest-link');
 
-  document.getElementById('screen-passenger-request').classList.add('hidden');
-  document.getElementById('screen-offers-in-progress').classList.add('hidden');
-  document.getElementById('screen-active-trip').classList.add('hidden');
-  document.getElementById('screen-driver-mode').classList.remove('hidden');
+  if (titleEl) titleEl.textContent = 'Ruta Libre Driver';
+  if (subEl) subEl.textContent = 'Radar Conductor';
+  if (pwaLabel) pwaLabel.textContent = 'Instalar Driver';
+  if (manifestLink) manifestLink.href = '/manifest-driver.json';
+
+  // Mostrar barra de navegación de conductor y ocultar pasajero
+  document.getElementById('nav-passenger')?.classList.add('hidden');
+  document.getElementById('nav-driver')?.classList.remove('hidden');
+
+  // Ocultar pantallas de pasajero
+  document.getElementById('screen-passenger-request')?.classList.add('hidden');
+  document.getElementById('screen-offers-in-progress')?.classList.add('hidden');
+  document.getElementById('screen-active-trip')?.classList.add('hidden');
+
+  // Activar tab de radar por defecto
+  switchDriverTab('radar');
 
   if (appState.map) {
     if (appState.originMarker && appState.map.hasLayer(appState.originMarker)) {
@@ -881,7 +899,7 @@ function setDriverModeActive() {
   });
 
   const list = document.getElementById('driver-trips-list');
-  if (appState.activeRequests.size === 0) {
+  if (list && appState.activeRequests.size === 0) {
     list.innerHTML = `
       <div id="no-driver-trips-msg" class="flex flex-col items-center justify-center p-6 text-center space-y-2 bg-[#0d1117] rounded-2xl border border-cardBorder">
         <div class="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
@@ -895,6 +913,9 @@ function setDriverModeActive() {
       </div>
     `;
   }
+
+  refreshDriverStatsUI();
+  updateDriverToolsUI();
 }
 
 function switchRole(role) {
@@ -902,11 +923,27 @@ function switchRole(role) {
   const bPass = document.getElementById('toggle-pass');
   const bDriv = document.getElementById('toggle-driv');
 
+  const titleEl = document.getElementById('header-title');
+  const subEl = document.getElementById('header-subtitle');
+  const pwaLabel = document.getElementById('btn-pwa-header-label');
+  const manifestLink = document.getElementById('manifest-link');
+
   if (role === 'passenger') {
-    bPass.className = 'px-2.5 py-1 rounded-lg text-xs font-semibold bg-white text-black transition-all';
-    bDriv.className = 'px-2.5 py-1 rounded-lg text-xs font-semibold text-subtext hover:text-white transition-all';
-    document.getElementById('header-title').textContent = 'Solicitar viaje';
-    document.getElementById('screen-driver-mode').classList.add('hidden');
+    if (bPass) bPass.className = 'px-2.5 py-1 rounded-lg text-xs font-semibold bg-white text-black transition-all';
+    if (bDriv) bDriv.className = 'px-2.5 py-1 rounded-lg text-xs font-semibold text-subtext hover:text-white transition-all';
+    if (titleEl) titleEl.textContent = 'Solicitar viaje';
+    if (subEl) subEl.textContent = 'Modo Pasajero';
+    if (pwaLabel) pwaLabel.textContent = 'Instalar';
+    if (manifestLink) manifestLink.href = '/manifest.json';
+
+    // Navegación de pasajero
+    document.getElementById('nav-driver')?.classList.add('hidden');
+    document.getElementById('nav-passenger')?.classList.remove('hidden');
+
+    // Ocultar todas las pantallas del conductor
+    document.getElementById('screen-driver-mode')?.classList.add('hidden');
+    document.getElementById('screen-driver-stats')?.classList.add('hidden');
+    document.getElementById('screen-driver-tools')?.classList.add('hidden');
 
     if (appState.driverMarker && appState.map) {
       appState.map.removeLayer(appState.driverMarker);
@@ -931,9 +968,9 @@ function switchRole(role) {
     }
 
     if (appState.activeTripData) {
-      document.getElementById('screen-active-trip').classList.remove('hidden');
+      document.getElementById('screen-active-trip')?.classList.remove('hidden');
     } else {
-      document.getElementById('screen-passenger-request').classList.remove('hidden');
+      document.getElementById('screen-passenger-request')?.classList.remove('hidden');
       updateRealRouteAndTiming();
     }
   } else {
@@ -943,6 +980,249 @@ function switchRole(role) {
     setDriverModeActive();
   }
 }
+
+/**
+ * Pestañas dedicadas exclusivamente para conductores: Radar, Estadísticas, Herramientas
+ */
+window.switchDriverTab = function(tab) {
+  appState.driverTab = tab;
+
+  const screenRadar = document.getElementById('screen-driver-mode');
+  const screenStats = document.getElementById('screen-driver-stats');
+  const screenTools = document.getElementById('screen-driver-tools');
+
+  const btnRadar = document.getElementById('nav-driver-btn-radar');
+  const btnStats = document.getElementById('nav-driver-btn-stats');
+  const btnTools = document.getElementById('nav-driver-btn-tools');
+
+  // Reset estilos nav
+  [btnRadar, btnStats, btnTools].forEach(b => {
+    if (b) {
+      b.className = 'flex flex-col items-center justify-center gap-1 text-subtext hover:text-white font-medium min-w-[56px] transition-colors';
+    }
+  });
+
+  if (tab === 'radar') {
+    screenRadar?.classList.remove('hidden');
+    screenStats?.classList.add('hidden');
+    screenTools?.classList.add('hidden');
+    if (btnRadar) btnRadar.className = 'flex flex-col items-center justify-center gap-1 text-emerald-400 font-semibold min-w-[56px]';
+    if (appState.map) setTimeout(() => appState.map.invalidateSize(), 50);
+  } else if (tab === 'stats') {
+    screenRadar?.classList.add('hidden');
+    screenStats?.classList.remove('hidden');
+    screenTools?.classList.add('hidden');
+    if (btnStats) btnStats.className = 'flex flex-col items-center justify-center gap-1 text-emerald-400 font-semibold min-w-[56px]';
+    refreshDriverStatsUI();
+  } else if (tab === 'tools') {
+    screenRadar?.classList.add('hidden');
+    screenStats?.classList.add('hidden');
+    screenTools?.classList.remove('hidden');
+    if (btnTools) btnTools.className = 'flex flex-col items-center justify-center gap-1 text-emerald-400 font-semibold min-w-[56px]';
+    updateDriverToolsUI();
+    calculateDriverQuickChange();
+  }
+};
+
+function refreshDriverStatsUI() {
+  const stats = getDriverStats();
+  const elEarnings = document.getElementById('driver-stats-earnings');
+  const elTrips = document.getElementById('driver-stats-trips');
+  const elHours = document.getElementById('driver-stats-hours');
+  const elRate = document.getElementById('driver-stats-rate');
+  const elRating = document.getElementById('driver-stats-rating');
+
+  if (elEarnings) elEarnings.textContent = `$${Number(stats.todayEarnings).toLocaleString('es-CO')}`;
+  if (elTrips) elTrips.textContent = stats.completedTrips;
+  if (elHours) elHours.textContent = stats.hoursOnline || '3h 45m';
+  if (elRate) elRate.textContent = stats.acceptanceRate || '98%';
+  if (elRating) elRating.textContent = stats.rating || '4.95 ★';
+
+  // Renderizar historial reciente de viajes del conductor
+  const listContainer = document.getElementById('driver-completed-trips-list');
+  if (listContainer) {
+    const history = getStoredHistory();
+    if (history.length > 0) {
+      listContainer.innerHTML = history.slice(0, 5).map(t => `
+        <div class="rounded-xl bg-[#0d1117] border border-cardBorder p-2.5 flex items-center justify-between text-xs">
+          <div>
+            <span class="font-bold text-white truncate max-w-[200px] block">${t.origin || 'Origen'} ➔ ${t.destination || 'Destino'}</span>
+            <p class="text-[10px] text-subtext">${t.date} • ${t.distanceKm || '2.5'} km • Efectivo</p>
+          </div>
+          <span class="font-mono font-bold text-emerald-400">$${Number(t.fare).toLocaleString('es-CO')} COP</span>
+        </div>
+      `).join('');
+    }
+  }
+}
+
+function updateDriverToolsUI() {
+  const plateEl = document.getElementById('tool-driver-plate');
+  const modelEl = document.getElementById('tool-driver-model');
+  const info = appState.driverInfo || getStoredDriverInfo();
+
+  if (info) {
+    if (plateEl) plateEl.textContent = info.plate || 'ABC-123';
+    if (modelEl) modelEl.textContent = `${info.model || 'Vehículo'} (${info.color || ''})`;
+  }
+}
+
+window.calculateDriverQuickChange = function() {
+  const fare = Number(document.getElementById('calc-tool-fare')?.value) || 0;
+  const received = Number(document.getElementById('calc-tool-received')?.value) || 0;
+  const diff = received - fare;
+  const resultEl = document.getElementById('calc-tool-result');
+  const breakdownEl = document.getElementById('calc-tool-breakdown');
+  if (!resultEl || !breakdownEl) return;
+
+  if (diff < 0) {
+    resultEl.textContent = `-$${Math.abs(diff).toLocaleString('es-CO')} COP`;
+    resultEl.className = 'text-xl font-bold font-mono text-red-400';
+    breakdownEl.textContent = `Faltan $${Math.abs(diff).toLocaleString('es-CO')} COP para cubrir la tarifa`;
+  } else if (diff === 0) {
+    resultEl.textContent = `$0 COP`;
+    resultEl.className = 'text-xl font-bold font-mono text-slate-200';
+    breakdownEl.textContent = 'Pago exacto en efectivo, no requiere entregar cambio.';
+  } else {
+    resultEl.textContent = `$${diff.toLocaleString('es-CO')} COP`;
+    resultEl.className = 'text-xl font-bold font-mono text-emerald-400';
+    
+    // Desglose con billetes colombianos
+    let rem = diff;
+    const parts = [];
+    const denominations = [
+      { name: 'billete de $50.000', val: 50000 },
+      { name: 'billete de $20.000', val: 20000 },
+      { name: 'billete de $10.000', val: 10000 },
+      { name: 'billete de $5.000', val: 5000 },
+      { name: 'billete de $2.000', val: 2000 },
+      { name: 'moneda de $1.000', val: 1000 },
+      { name: 'moneda de $500', val: 500 }
+    ];
+
+    for (const d of denominations) {
+      if (rem >= d.val) {
+        const count = Math.floor(rem / d.val);
+        rem %= d.val;
+        parts.push(`${count} ${d.name}${count > 1 ? 's' : ''}`);
+      }
+    }
+
+    breakdownEl.textContent = parts.length > 0
+      ? `Devolver: ${parts.join(', ')}`
+      : 'Entrega el cambio en efectivo';
+  }
+};
+
+window.setReceivedBillCalc = function(amount) {
+  const input = document.getElementById('calc-tool-received');
+  if (input) {
+    input.value = amount;
+    calculateDriverQuickChange();
+  }
+};
+
+/* =====================================================================
+   BLOQUEO SIN CONEXIÓN Y DETECCIÓN DE RED EN VIVO
+   ===================================================================== */
+function initOfflineBlocker() {
+  const blocker = document.getElementById('offline-blocker');
+  if (!blocker) return;
+
+  const updateState = () => {
+    if (!navigator.onLine) {
+      blocker.classList.remove('hidden');
+    } else {
+      blocker.classList.add('hidden');
+    }
+  };
+
+  window.addEventListener('offline', () => {
+    blocker.classList.remove('hidden');
+    const txt = document.getElementById('offline-status-text');
+    if (txt) txt.textContent = 'Sin conexión detectada...';
+  });
+
+  window.addEventListener('online', () => {
+    blocker.classList.add('hidden');
+    showToast('¡Conexión a internet restablecida!');
+  });
+
+  updateState();
+}
+
+window.checkAndRetryConnection = async function() {
+  const btn = document.getElementById('btn-retry-connection');
+  const txt = document.getElementById('offline-status-text');
+  if (btn) btn.disabled = true;
+  if (txt) txt.textContent = 'Verificando señal...';
+
+  try {
+    const res = await fetch(`/favicon.svg?t=${Date.now()}`, { cache: 'no-store' });
+    if (res.ok && navigator.onLine) {
+      document.getElementById('offline-blocker')?.classList.add('hidden');
+      showToast('¡Conexión a internet restablecida!');
+      if (btn) btn.disabled = false;
+      return;
+    }
+  } catch (e) {}
+
+  if (txt) txt.textContent = 'Aún sin conexión. Esperando red...';
+  if (btn) btn.disabled = false;
+  showToast('No se detectó internet. Por favor verifica tus datos o Wi-Fi.');
+};
+
+/* =====================================================================
+   PWA INSTALACIÓN DUAL: RUTA LIBRE VS RUTA LIBRE DRIVER
+   ===================================================================== */
+window._deferredPWAInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  window._deferredPWAInstallPrompt = e;
+});
+
+window.openPWAInstallModal = function() {
+  const isIOS = /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase());
+  const guide = document.getElementById('ios-pwa-guide');
+  if (guide) guide.classList.toggle('hidden', !isIOS);
+  document.getElementById('modal-pwa-install')?.classList.remove('hidden');
+};
+
+window.closePWAInstallModal = function() {
+  document.getElementById('modal-pwa-install')?.classList.add('hidden');
+};
+
+window.installPWAByChoice = async function(role) {
+  const manifestLink = document.getElementById('manifest-link');
+  if (manifestLink) {
+    manifestLink.href = role === 'driver' ? '/manifest-driver.json' : '/manifest.json';
+  }
+
+  if (role === 'driver') {
+    switchRole('driver');
+  } else {
+    switchRole('passenger');
+  }
+
+  if (window._deferredPWAInstallPrompt) {
+    window._deferredPWAInstallPrompt.prompt();
+    const choice = await window._deferredPWAInstallPrompt.userChoice;
+    window._deferredPWAInstallPrompt = null;
+    closePWAInstallModal();
+    if (choice.outcome === 'accepted') {
+      showToast(`Instalando ${role === 'driver' ? 'Ruta Libre Driver' : 'Ruta Libre'}...`);
+    }
+  } else {
+    closePWAInstallModal();
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+    if (isStandalone) {
+      showToast('Ya estás usando la versión instalada');
+    } else {
+      showToast('En el menú del navegador toca "Instalar aplicación" o "Agregar a pantalla principal"');
+    }
+  }
+};
+
 
 /* =====================================================================
    5. CHAT P2P EFÍMERO CON NOTIFICACIÓN SONORA
@@ -1434,6 +1714,10 @@ function finishTripAndPay() {
     auditFingerprint: trip.auditFingerprint
   });
 
+  // Actualizar estadísticas del conductor en vivo
+  recordDriverCompletedTrip(trip.fare, appState.realDistanceKm || 2.5);
+  refreshDriverStatsUI();
+
   document.getElementById('receipt-amount').textContent = `$${Number(trip.fare).toLocaleString('es-CO')} COP`;
   document.getElementById('modal-receipt').classList.remove('hidden');
 }
@@ -1656,11 +1940,42 @@ window.saveWelcomeProfile = () => {
   switchRole(chosenWelcomeRole);
 };
 
-// Arranque inicial limpio
+// Arranque inicial limpio con soporte PWA y validación offline
 window.addEventListener('DOMContentLoaded', () => {
+  initOfflineBlocker();
   initMap();
 
+  const urlParams = new URLSearchParams(window.location.search);
+  const queryRole = urlParams.get('role'); // 'driver' o 'passenger'
+
   const saved = getStoredProfile();
+
+  if (queryRole === 'driver') {
+    chosenWelcomeRole = 'driver';
+    if (saved) {
+      saved.role = 'driver';
+      saveStoredProfile(saved);
+      appState.profile = saved;
+      document.getElementById('header-avatar-initial').textContent = saved.alias.charAt(0).toUpperCase();
+      initNetwork();
+      if (checkDriverVerificationOrPrompt()) {
+        switchRole('driver');
+      }
+    } else {
+      // Si entra a la versión de Driver sin perfil, pedimos datos de conductor de inmediato
+      appState.profile = {
+        alias: 'Conductor',
+        role: 'driver',
+        id: `RL_DRV_${Math.random().toString(36).slice(2, 6).toUpperCase()}`
+      };
+      saveStoredProfile(appState.profile);
+      initNetwork();
+      checkDriverVerificationOrPrompt();
+      switchRole('driver');
+    }
+    return;
+  }
+
   if (saved) {
     appState.profile = saved;
     document.getElementById('header-avatar-initial').textContent = saved.alias.charAt(0).toUpperCase();
@@ -1678,4 +1993,10 @@ window.addEventListener('DOMContentLoaded', () => {
   } else {
     document.getElementById('modal-welcome').classList.remove('hidden');
   }
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  }
 });
+
+
